@@ -88,7 +88,7 @@ jobs:
         run: ./gradlew assemble
       - name: attach
         run: |
-          apt-get update && apt-get install curl
+          apt-get update && yes | apt-get install curl
           echo "class Dummy{public static void main(String[] args)throws InterruptedException{while (true){Thread.sleep(1000);}}}" > Dummy.java
           javac Dummy.java
           $(nohup java Dummy > out.txt &)
