@@ -15,7 +15,6 @@ import rocks.inspectit.ocelot.grpc.PingCommand;
 import rocks.inspectit.ocelot.rest.AbstractBaseController;
 
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Controller providing functionality to use agent commands.
@@ -35,7 +34,7 @@ public class AgentCommandController extends AbstractBaseController {
      * @return Returns OK if the Agent is reachable and Timeout if it is not.
      */
     @GetMapping(value = "command/ping")
-    public DeferredResult<ResponseEntity<?>> ping(@RequestParam(value = "agent-id") String agentId) throws ExecutionException {
+    public DeferredResult<ResponseEntity<?>> ping(@RequestParam(value = "agent-id") String agentId) {
         Command command = Command.newBuilder()
                 .setCommandId(UUID.randomUUID().toString())
                 .setPing(PingCommand.newBuilder())
@@ -44,17 +43,16 @@ public class AgentCommandController extends AbstractBaseController {
     }
 
     @GetMapping(value = "command/logs")
-    public DeferredResult<ResponseEntity<?>> logs(@RequestParam(value = "agent-id") String agentId) throws ExecutionException {
+    public DeferredResult<ResponseEntity<?>> logs(@RequestParam(value = "agent-id") String agentId, @RequestParam(value = "log-format", required = false, defaultValue = "%d{ISO8601} %-5p %-6r --- [inspectIT] [%15.15t] %-40.40logger{39} : %m%n%rEx") String logFormat) {
         Command command = Command.newBuilder()
                 .setCommandId(UUID.randomUUID().toString())
-                .setLogs(LogsCommand.newBuilder()
-                        .setLogFormat("%d{ISO8601} %-5p %-6r --- [inspectIT] [%15.15t] %-40.40logger{39} : %m%n%rEx"))
+                .setLogs(LogsCommand.newBuilder().setLogFormat(logFormat))
                 .build();
         return commandService.dispatchCommand(agentId, command);
     }
 
     @GetMapping(value = "command/list/classes")
-    public DeferredResult<ResponseEntity<?>> listClasses(@RequestParam(value = "agent-id") String agentId, @RequestParam(value = "query") String query) throws ExecutionException {
+    public DeferredResult<ResponseEntity<?>> listClasses(@RequestParam(value = "agent-id") String agentId, @RequestParam(value = "query") String query) {
         Command command = Command.newBuilder()
                 .setCommandId(UUID.randomUUID().toString())
                 .setListClasses(ListClassesCommand.newBuilder().setFilter(query))
