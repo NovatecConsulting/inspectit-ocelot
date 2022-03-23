@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 import rocks.inspectit.ocelot.IntegrationTestBase;
 import rocks.inspectit.ocelot.config.model.InspectitConfig;
 import rocks.inspectit.ocelot.config.model.instrumentation.actions.GenericActionSettings;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Test class for {@link HighlightRulesMapController}
  */
+@TestPropertySource(properties = {"grpc.server.port=-1"})
 public class HighlightRulesMapControllerIntTest extends IntegrationTestBase {
 
     @Autowired
