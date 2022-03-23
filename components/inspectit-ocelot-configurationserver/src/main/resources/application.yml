@@ -26,9 +26,11 @@ server:
 grpc:
   server:
     # The grpc port, needs to be synced with the port set in the agent configuration.
-    # The default value if nothing is set is 9090. That is also the default value for the agent
+    # The default value if nothing is set is 9090 from the used library, however the default set here is 9657 to avoid
+    # clashing with prometheus' default port.
+    # 9657 is therefore also the default value for the agent.
     # If set to -1 the grpc server is deactivated.
-    port: 9090
+    port: 9657
 
     # The grpc server's security settings
     security:

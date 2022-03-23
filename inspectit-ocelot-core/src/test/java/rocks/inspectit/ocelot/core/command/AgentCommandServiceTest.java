@@ -41,7 +41,7 @@ public class AgentCommandServiceTest {
         @Test
         public void successfullyEnabled() throws InterruptedException {
             lenient().when(configuration.getAgentCommands().getHost()).thenReturn("inspectit.rocks");
-            lenient().when(configuration.getAgentCommands().getPort()).thenReturn(9090);
+            lenient().when(configuration.getAgentCommands().getPort()).thenReturn(9657);
 
             boolean result = service.doEnable(configuration);
 
@@ -69,7 +69,7 @@ public class AgentCommandServiceTest {
         @Test
         public void isEnabled() throws MalformedURLException, InterruptedException {
             when(configuration.getAgentCommands().getHost()).thenReturn("inspectitrocks");
-            when(configuration.getAgentCommands().getPort()).thenReturn(9090);
+            when(configuration.getAgentCommands().getPort()).thenReturn(9657);
 
             service.doEnable(configuration);
             TimeUnit.SECONDS.sleep(5);
@@ -133,9 +133,9 @@ public class AgentCommandServiceTest {
         @Mock
         private AgentCommandSettings settings;
 
-        private String HOST = "inspectit.rocks";
+        private final String HOST = "inspectit.rocks";
 
-        private int PORT = 9090;
+        private final int PORT = 9657;
 
         @Test
         public void onlyOneOfCertificatesSet() throws IOException {

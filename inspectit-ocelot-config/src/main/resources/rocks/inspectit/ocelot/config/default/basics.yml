@@ -110,7 +110,7 @@ inspectit:
     # the host for fetching agent commands over grpc - e.g.: localhost
     host:
     # Port the agent will use to connect to the config-server over grpc, should correspond to grpc.server.port in config-server's properties.
-    port: 9090
+    port: 9657
     # Whether TLS should be used for grpc connection.
     use-tls: true
     # Path to a collection of trusted certificates, needed for TLS for agent commands if server's certificate does not chain to a standard root.
