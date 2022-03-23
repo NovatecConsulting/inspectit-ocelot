@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.serverfactory.GrpcServerConfigurer;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import rocks.inspectit.ocelot.grpc.AgentCommandsGrpc;
 import rocks.inspectit.ocelot.grpc.Command;
 import rocks.inspectit.ocelot.grpc.CommandResponse;
 
+import javax.annotation.PostConstruct;
 import java.time.Duration;
 import java.util.UUID;
 
@@ -30,6 +32,16 @@ public class CommandsGrpcService extends AgentCommandsGrpc.AgentCommandsImplBase
 
     @Autowired
     private AgentCallbackManager callbackManager;
+
+    @Value("${grpc.server.security.enabled}")
+    private Boolean tlsEnabled;
+
+    @PostConstruct
+    private void checkForTls() {
+        if (!tlsEnabled) {
+            log.warn("You are using agent commands without TLS. This means all commands and their responses will be sent unencrypted in plaintext over the network. Check with the documentation on how to enable TLS.");
+        }
+    }
 
     /**
      * Keys are agent-ids and values the corresponding StreamObserver that can be used to send commands to that agent.
