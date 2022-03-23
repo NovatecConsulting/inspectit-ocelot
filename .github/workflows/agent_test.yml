@@ -79,14 +79,9 @@ jobs:
   attach-alpine-jdk8:
     name: Testing Runtime Attachment
     runs-on: ubuntu-latest
-    container: openjdk:8-jdk-alpine
+    container: openjdk:8-jdk-slim-bullseye
     steps:
       - uses: actions/checkout@v2
-      - name: install glibc
-        run:  |
-          wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
-          wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r0/glibc-2.35-r0.apk
-          apk add glibc-2.35-r0.apk
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: assemble
