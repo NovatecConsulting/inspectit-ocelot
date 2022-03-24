@@ -48,10 +48,17 @@ public class CommandsGrpcService extends AgentCommandsGrpc.AgentCommandsImplBase
      */
     BiMap<String, StreamObserver<Command>> agentConnections = Maps.synchronizedBiMap(HashBiMap.create());
 
+    /**
+     * Dispatches a given command to the given agent, and adds a CommandCallBack to the CallbackManager for later handling of the response.
+     *
+     * @param agentId Id of the agent that should execute the command.
+     * @param command The command to be executed by the agent.
+     *
+     * @return Returns DeferredResult that will be filled later with the agent's response.
+     */
     public DeferredResult<ResponseEntity<?>> dispatchCommand(String agentId, Command command) {
 
-        // TODO: 03.03.2022 Move this comment into Reviewable comment
-        // Build Response here, since it is the same in each handler
+        // Prepare response
         Duration responseTimeout = configuration.getAgentCommand().getResponseTimeout();
         DeferredResult<ResponseEntity<?>> deferredResult = new DeferredResult<>(responseTimeout.toMillis());
         deferredResult.onTimeout(() -> ResponseEntity.status(HttpStatus.REQUEST_TIMEOUT).build());
@@ -72,6 +79,13 @@ public class CommandsGrpcService extends AgentCommandsGrpc.AgentCommandsImplBase
         return deferredResult;
     }
 
+    /**
+     * Bi-directional streaming gRPC call for exchanging agent commands and responses.
+     *
+     * @param commandsObserver StreamObserver that the server can use to send commands to the agent that called this method.
+     *
+     * @return Returns StreamObserver that the agent that called this method can use to send responses to the server.
+     */
     @Override
     public StreamObserver<CommandResponse> askForCommands(StreamObserver<Command> commandsObserver) {
         return new StreamObserver<CommandResponse>() {
@@ -79,10 +93,14 @@ public class CommandsGrpcService extends AgentCommandsGrpc.AgentCommandsImplBase
             @Override
             public void onNext(CommandResponse commandResponse) {
                 if (commandResponse.hasFirst()) {
+                    // In its first message the agent will tell the server its ID
                     String agentId = commandResponse.getFirst().getAgentId();
                     log.info("New agent '{}' connected itself to config-server.", agentId);
+                    // To be able to connect incoming commands with the correct connection to the given agent,
+                    // the server adds the connection to agentConnections
                     agentConnections.put(agentId, commandsObserver);
                 } else {
+                    // If the message is not the first one, it will contain a CommandResponse
                     String agentId = agentConnections.inverse().get(commandsObserver);
                     log.info("Agent '{}' answered to '{}'.", agentId, commandResponse.getCommandId());
                     callbackManager.handleCommandResponse(UUID.fromString(commandResponse.getCommandId()), commandResponse);
@@ -93,18 +111,26 @@ public class CommandsGrpcService extends AgentCommandsGrpc.AgentCommandsImplBase
             public void onError(Throwable t) {
                 String agentId = agentConnections.inverse().get(commandsObserver);
                 log.error("Encountered error in exchangeInformation ending the stream connection with agent {}. {}", agentId, t.toString());
+                // Encountering an error closes the connection, so it also needs to be removed from agentConnections.
                 agentConnections.remove(agentId);
             }
 
             @Override
             public void onCompleted() {
+                // The agent will call this when it ends its AgentCommandService.
                 String agentId = agentConnections.inverse().get(commandsObserver);
                 log.info("Agent '{}' ended the stream connection.", agentId);
+                // When this method is called, the connection is closed, so it also needs to be removed from agentConnections.
                 agentConnections.remove(agentId);
             }
         };
     }
 
+    /**
+     * Customizes the created gRPC server to make the maxInboundMessageSize configurable.
+     *
+     * @return Returns customized GrpcServerConfigurer.
+     */
     @Bean
     public GrpcServerConfigurer grpcServerConfigurer() {
         return serverBuilder -> {
