@@ -94,7 +94,7 @@ public abstract class DynamicallyActivatableService {
      * @return true, if the service is now stopped
      */
     @PreDestroy
-    public synchronized boolean disable() {
+    synchronized boolean disable() {
         if (enabled) {
             enabled = !doDisable();
         }

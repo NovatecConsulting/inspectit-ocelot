@@ -8,7 +8,6 @@ import rocks.inspectit.ocelot.config.model.command.AgentCommandSettings;
 import rocks.inspectit.ocelot.grpc.*;
 
 import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -33,11 +32,10 @@ public class AgentCommandClient {
     AgentCommandClient(Channel channel) {
         asyncStub = AgentCommandsGrpc.newStub(channel);
 
-        RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
-        agentId = runtime.getName();
+        agentId = ManagementFactory.getRuntimeMXBean().getName();
     }
 
-    boolean startAskForCommandsConnection(AgentCommandSettings settings, AgentCommandService service) {
+    boolean startAskForCommandsConnection(AgentCommandSettings settings, CommandDelegator commandDelegator) {
         try {
 
             StreamObserver<Command> commandObserver = new StreamObserver<Command>() {
@@ -45,7 +43,7 @@ public class AgentCommandClient {
                 public void onNext(Command command) {
                     try {
                         log.info("Received command '{}' from config-server.", command.getCommandId());
-                        commandResponseObserver.onNext(service.getCommandDelegator().delegate(command));
+                        commandResponseObserver.onNext(commandDelegator.delegate(command));
                         log.info("Answered to command '{}'.", command.getCommandId());
                     } catch (Exception exception) {
                         commandResponseObserver.onNext(CommandResponse.newBuilder()
@@ -62,37 +60,15 @@ public class AgentCommandClient {
                     // It can happen that onError() is called after the service was disabled already, since the client in shutdown()
                     // tries to send an onCompleted() to the server, which will lead to an error if the connection is unavailable.
                     // So, if the commandResponseObserver was already set to null by shutdown(), do not retry to establish the connection
-                    if (commandResponseObserver != null) {
-                        log.error("Encountered error in exchangeInformation ending the stream connection with config-Server.", t);
-
-                        long currentTime = System.nanoTime();
-
-                        if (retriesAttempted > 0) {
-                            if ((currentTime - lastRetryAttempt) > settings.getBackoffResetTime().toNanos()) {
-                                retriesAttempted = 0;
-                            }
-                        }
-
-                        ScheduledFuture<?> restartFuture = reconnectExecutor.schedule(() -> {
-                            boolean success = startAskForCommandsConnection(settings, service);
-                            if (success) {
-                                log.info("Successfully restarted connection after error.");
-                            } else {
-                                service.disable();
-                                log.info("Could not restart connection after error.");
-                            }
-                        }, (long) Math.pow(2, retriesAttempted + 1), TimeUnit.SECONDS);
-
-                        if (retriesAttempted < settings.getMaxBackoffIncreases()) {
-                            retriesAttempted++;
-                        }
-
-                        lastRetryAttempt = currentTime;
-                    } else {
+                    if (commandResponseObserver == null) {
                         log.info("Error while trying to send onCompleted() to server. Will end connection without retrying.", t);
+                    } else {
+                        log.error("Encountered error in askForCommands ending the stream connection with config-Server.", t);
+                        reestablishConnection(settings, commandDelegator);
                     }
                 }
 
+                // The server will never call this, so it is left empty.
                 @Override
                 public void onCompleted() {
                 }
@@ -111,6 +87,36 @@ public class AgentCommandClient {
         }
 
         return true;
+    }
+
+    private void reestablishConnection(AgentCommandSettings settings, CommandDelegator commandDelegator) {
+        log.info("Re-establishing gRPC connection.");
+
+        long currentTime = System.nanoTime();
+
+        if (retriesAttempted > 0) {
+            if ((currentTime - lastRetryAttempt) > settings.getBackoffResetTime().toNanos()) {
+                retriesAttempted = 0;
+            }
+        }
+
+        ScheduledFuture<Boolean> restartFuture = reconnectExecutor.schedule(() -> startAskForCommandsConnection(settings, commandDelegator), (long) Math.pow(2, retriesAttempted + 1), TimeUnit.SECONDS);
+
+        if (retriesAttempted < settings.getMaxBackoffIncreases()) {
+            retriesAttempted++;
+        }
+
+        lastRetryAttempt = currentTime;
+
+        boolean successful;
+        try {
+            successful = restartFuture.get();
+        } catch (Exception e) {
+            successful = false;
+        }
+        if (!successful) {
+            reestablishConnection(settings, commandDelegator);
+        }
     }
 
     void shutdown() {
