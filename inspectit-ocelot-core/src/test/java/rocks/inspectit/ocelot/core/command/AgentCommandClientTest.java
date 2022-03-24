@@ -105,7 +105,7 @@ class AgentCommandClientTest {
             when(commandService.getCommandDelegator()).thenReturn(delegator);
             when(delegator.delegate(any())).thenReturn(response);
 
-            client.startAskForCommandsConnection(settings, commandService);
+            client.startAskForCommandsConnection(settings, commandService.getCommandDelegator());
 
             RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
             String agentId = runtime.getName();

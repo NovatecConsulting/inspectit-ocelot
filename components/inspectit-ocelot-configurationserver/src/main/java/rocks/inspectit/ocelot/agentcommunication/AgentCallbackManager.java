@@ -82,6 +82,7 @@ public class AgentCallbackManager {
             resultCache.invalidate(commandId);
 
             if (response.hasError()) {
+                // If an exception was thrown while executing the command in the agent, the response will contain its message in error.
                 String errorMessage = response.getError().getMessage();
                 log.info("The agent has encountered an error while trying to process command '{}': {}", commandId, errorMessage);
                 result.setErrorResult(new RuntimeException(errorMessage));
