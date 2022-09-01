@@ -1,9 +1,9 @@
 name: Java Agent Tests
 
 on:
-  push:
-    branches:
-      - master
+  #push:
+  #  branches:
+  #    - master
   pull_request:
     branches:
       - master
@@ -16,6 +16,7 @@ on:
       - '**.txt'
       - '.github/**'
       - '.circleci/**'
+  workflow_call:
 
 jobs:
   pr-check:
